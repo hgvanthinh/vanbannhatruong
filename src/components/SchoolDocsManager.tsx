@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { App, Button, Card, Empty, Grid, Popconfirm, Skeleton, Space, Table, Tag, Typography } from 'antd';
-import { DeleteOutlined, EditOutlined, ExportOutlined, PlusOutlined, QrcodeOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, ExportOutlined, PlusOutlined, PrinterOutlined, QrcodeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getCategoryMeta } from '../constants/docCategories';
 import { getDocFormMeta } from '../constants/docForms';
 import { buildDocUrl, buildSchoolUrl } from '../constants/site';
 import { createLibraryDoc, deleteLibraryDoc, listDocs, updateLibraryDoc } from '../services/docService';
-import { EMPTY_FILTER, filterDocs } from '../utils/libraryFilter';
+import { EMPTY_FILTER, filterDocs, sortDocs } from '../utils/libraryFilter';
+import { buildPrintListPath } from '../utils/printList';
+import { AttachmentList } from './AttachmentList';
 import { DocFormModal } from './DocFormModal';
 import { LibraryFilterBar } from './LibraryFilterBar';
 import { QrCodeModal } from './QrCodeModal';
@@ -57,7 +59,7 @@ export function SchoolDocsManager({ school, uid }: { school: School; uid: string
     refresh();
   }, [refresh]);
 
-  const visibleDocs = useMemo(() => filterDocs(docs, filter), [docs, filter]);
+  const visibleDocs = useMemo(() => sortDocs(filterDocs(docs, filter), filter.sort), [docs, filter]);
 
   function openForm(record: LibraryDoc | null) {
     setEditing(record);
@@ -82,7 +84,7 @@ export function SchoolDocsManager({ school, uid }: { school: School; uid: string
 
   async function handleDelete(record: LibraryDoc) {
     try {
-      await deleteLibraryDoc(school.slug, record.id);
+      await deleteLibraryDoc(school.slug, record);
       message.success('Đã xoá văn bản');
       refresh();
     } catch {
@@ -142,13 +144,17 @@ export function SchoolDocsManager({ school, uid }: { school: School; uid: string
           >
             QR của trường
           </Button>
+          {/* Tab mới: giữ nguyên trang quản lý; mang theo bộ lọc đang xem. */}
+          <Button icon={<PrinterOutlined />} href={buildPrintListPath(school.slug, filter)} target="_blank" disabled={docs.length === 0}>
+            In danh sách
+          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => openForm(null)}>
             Đăng văn bản
           </Button>
         </Space>
       </div>
 
-      <LibraryFilterBar docs={docs} filter={filter} onChange={setFilter} searchMaxWidth={isMobile ? undefined : 420} />
+      <LibraryFilterBar docs={docs} filter={filter} onChange={setFilter} resultCount={visibleDocs.length} />
 
       {isMobile ? (
         loading ? (
@@ -167,6 +173,7 @@ export function SchoolDocsManager({ school, uid }: { school: School; uid: string
                   <Typography.Text strong style={{ fontSize: 15 }}>
                     {d.title}
                   </Typography.Text>
+                  <AttachmentList attachments={d.attachments} newTab />
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
                     <DocTags doc={d} />
                     <Typography.Text type="secondary" style={{ fontSize: 13 }}>
@@ -191,9 +198,16 @@ export function SchoolDocsManager({ school, uid }: { school: School; uid: string
               title: 'Tên tài liệu',
               dataIndex: 'title',
               render: (title: string, record) => (
-                <a href={record.driveUrl} target="_blank" rel="noopener noreferrer">
-                  {title}
-                </a>
+                <>
+                  <a href={record.driveUrl} target="_blank" rel="noopener noreferrer">
+                    {title}
+                  </a>
+                  {!!record.attachments?.length && (
+                    <div style={{ marginTop: 4 }}>
+                      <AttachmentList attachments={record.attachments} newTab />
+                    </div>
+                  )}
+                </>
               ),
             },
             { title: 'Hình thức / Loại', key: 'tags', width: 260, render: (_, record) => <DocTags doc={record} /> },
@@ -213,7 +227,7 @@ export function SchoolDocsManager({ school, uid }: { school: School; uid: string
         />
       )}
 
-      <DocFormModal open={formOpen} editing={editing} onCancel={() => setFormOpen(false)} onSubmit={handleSubmit} />
+      <DocFormModal slug={school.slug} open={formOpen} editing={editing} onCancel={() => setFormOpen(false)} onSubmit={handleSubmit} />
 
       <QrCodeModal
         open={!!qrTarget}

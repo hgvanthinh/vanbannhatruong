@@ -9,6 +9,7 @@ export const DOC_CATEGORIES = [
   { value: 'cong-doan', label: 'Công đoàn', color: 'orange' },
   { value: 'doan-doi', label: 'Đoàn - Đội', color: 'cyan' },
   { value: 'cap-tren', label: 'Văn bản cấp trên', color: 'purple' },
+  { value: 'ban-tru', label: 'Hồ sơ bán trú', color: 'green' },
   { value: 'khac', label: 'Khác', color: 'default' },
 ] as const;
 

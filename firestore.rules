@@ -65,12 +65,32 @@ service cloud.firestore {
         && d.updatedAt is int;
     }
 
+    // Phụ lục / văn bản kèm theo: list ≤ 10 phần tử {name, url}. Rules không lặp
+    // được list nên kiểm từng vị trí (vị trí vượt size() thì bỏ qua).
+    // Khớp MAX_ATTACHMENTS trong src/services/docService.ts.
+    function vbValidAttachment(list, i) {
+      return i >= list.size() || (
+        list[i] is map && list[i].keys().hasOnly(['name', 'url'])
+        && list[i].name is string && list[i].name.size() > 0 && list[i].name.size() <= 200
+        && list[i].url is string && list[i].url.matches('^https://.+') && list[i].url.size() <= 2000);
+    }
+
+    function vbValidAttachments(d) {
+      return !('attachments' in d) || (d.attachments is list && d.attachments.size() <= 10
+        && vbValidAttachment(d.attachments, 0) && vbValidAttachment(d.attachments, 1)
+        && vbValidAttachment(d.attachments, 2) && vbValidAttachment(d.attachments, 3)
+        && vbValidAttachment(d.attachments, 4) && vbValidAttachment(d.attachments, 5)
+        && vbValidAttachment(d.attachments, 6) && vbValidAttachment(d.attachments, 7)
+        && vbValidAttachment(d.attachments, 8) && vbValidAttachment(d.attachments, 9));
+    }
+
     function vbValidDoc(d) {
-      return d.keys().hasOnly(['title', 'docForm', 'category', 'driveUrl', 'createdAt', 'createdBy', 'updatedAt'])
+      return d.keys().hasOnly(['title', 'docForm', 'category', 'driveUrl', 'attachments', 'createdAt', 'createdBy', 'updatedAt'])
         && d.title is string && d.title.size() > 0 && d.title.size() <= 200
         && d.docForm is string && d.docForm.size() > 0 && d.docForm.size() <= 50
         && d.category is string && d.category.size() > 0 && d.category.size() <= 50
         && d.driveUrl is string && d.driveUrl.matches('^https://.+') && d.driveUrl.size() <= 2000
+        && vbValidAttachments(d)
         && d.createdAt is int && d.updatedAt is int;
     }
 
@@ -90,7 +110,7 @@ service cloud.firestore {
         && vbValidSchoolInfo(request.resource.data);
       allow delete: if vbIsEditor(slug) || vbIsAdmin();
 
-      // Văn bản: chỉ tên + hình thức + loại + link Drive (file thật nằm trên Drive).
+      // Văn bản: chỉ tên + hình thức + loại + link Drive (+ phụ lục cũng là link Drive).
       match /docs/{docId} {
         allow read: if true;
         allow create: if vbIsEditor(slug)
@@ -106,20 +126,27 @@ service cloud.firestore {
 
     // Danh sách email quản lý 1 trường — KHÔNG công khai. Người quản lý đọc được
     // doc có email của chính mình (query array-contains email để tìm "trường của tôi").
-    // Mọi email trong danh sách ngang quyền; luôn còn ≥ 1 email.
+    // Mọi email trong danh sách ngang quyền; luôn còn ≥ 1 email. `roles` = map
+    // email → vai trò (HT, văn thư, CNTT...) chỉ để hiển thị, không phân quyền.
+    function vbValidRoles(d) {
+      return !('roles' in d) || (d.roles is map && d.roles.keys().hasOnly(d.emails));
+    }
+
     match /vbSchoolEditors/{slug} {
       allow read: if vbIsAdmin() || (vbSignedIn() && vbEmail() in resource.data.emails);
       // Chỉ tạo khi đăng ký trường mới (trường chưa tồn tại trước batch), danh sách = đúng email người đăng ký.
       allow create: if vbSignedIn() && vbValidSlug(slug)
         && !exists(/databases/$(database)/documents/vbSchools/$(slug))
         && getAfter(/databases/$(database)/documents/vbSchools/$(slug)).data.createdBy == request.auth.uid
-        && request.resource.data.keys().hasOnly(['emails', 'updatedAt'])
-        && request.resource.data.emails == [vbEmail()];
+        && request.resource.data.keys().hasOnly(['emails', 'roles', 'updatedAt'])
+        && request.resource.data.emails == [vbEmail()]
+        && vbValidRoles(request.resource.data);
       allow update: if (vbIsEditor(slug) || vbIsAdmin())
-        && request.resource.data.keys().hasOnly(['emails', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['emails', 'roles', 'updatedAt'])
         && request.resource.data.emails is list
         && request.resource.data.emails.size() >= 1
-        && request.resource.data.emails.size() <= 20;
+        && request.resource.data.emails.size() <= 20
+        && vbValidRoles(request.resource.data);
       allow delete: if vbIsEditor(slug) || vbIsAdmin();
     }
   }

@@ -1,0 +1,36 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Cho phép bất kỳ ai đọc tài liệu
+    match /{allPaths=**} {
+      allow read;
+    }
+
+    // Chỉ cho phép upload nếu người dùng đã đăng nhập (authenticated)
+    match /documents/{document=**} {
+      allow write: if request.auth != null;
+    }
+
+    // Nếu bạn muốn chỉ cho phép admin upload, sử dụng rule này:
+    // match /documents/{document=**} {
+    //   allow write: if request.auth != null && request.auth.token.email == 'admin@bieuquyet.com';
+    // }
+
+    // ============================================================
+    // VĂN BẢN NHÀ TRƯỜNG (repo vanbannhatruong)
+    // Tệp tải thẳng lên Storage thay cho link Drive. Nút tải lên CHỈ hiện ở máy
+    // dev (npm run dev) với tài khoản admin, nên chỉ admin được ghi. Đọc công
+    // khai đã có ở khối {allPaths=**} phía trên.
+    // Khớp ADMIN_EMAILS (src/constants/site.ts) + MAX_UPLOAD_MB (src/services/uploadService.ts).
+    // ============================================================
+    function vbIsAdmin() {
+      return request.auth != null && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in ['thaygiaotin1990@gmail.com'];
+    }
+
+    match /vb/{slug}/{fileName} {
+      allow create: if vbIsAdmin() && request.resource.size <= 25 * 1024 * 1024;
+      allow delete: if vbIsAdmin();
+    }
+  }
+}

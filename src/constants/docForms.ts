@@ -15,6 +15,8 @@ export const DOC_FORMS = [
   { value: 'nghi-quyet', label: 'Nghị quyết' },
   { value: 'chuong-trinh', label: 'Chương trình' },
   { value: 'quy-che', label: 'Quy chế' },
+  { value: 'quy-dinh', label: 'Quy định' },
+  { value: 'noi-quy', label: 'Nội quy' },
   { value: 'khac', label: 'Khác' },
 ] as const;
 

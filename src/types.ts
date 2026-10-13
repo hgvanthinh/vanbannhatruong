@@ -1,5 +1,6 @@
 import type { DocCategory } from './constants/docCategories';
 import type { DocForm } from './constants/docForms';
+import type { EditorRole } from './constants/editorRoles';
 import type { SchoolLevel } from './constants/schoolLevels';
 
 /**
@@ -19,10 +20,23 @@ export interface School {
   updatedAt: number;
 }
 
+/** 1 người quản lý trường (vbSchoolEditors/{slug}: emails[] + roles{email: role}). */
+export interface SchoolEditor {
+  email: string;
+  /** Chỉ để hiển thị, không phân quyền. Có thể thiếu ở email thêm trước khi có vai trò. */
+  role?: EditorRole;
+}
+
 export interface SchoolFormValues {
   name: string;
   level: SchoolLevel;
   area: string;
+}
+
+/** Phụ lục / văn bản kèm theo của 1 văn bản — cũng chỉ là tên + link Drive. */
+export interface DocAttachment {
+  name: string;
+  url: string;
 }
 
 /** vbSchools/{slug}/docs/{docId} — 1 văn bản; file thật nằm trên Google Drive. */
@@ -32,6 +46,8 @@ export interface LibraryDoc {
   docForm: DocForm;
   category: DocCategory;
   driveUrl: string;
+  /** Doc cũ có thể thiếu. Tối đa MAX_ATTACHMENTS (khớp vbValidAttachments() trong rules). */
+  attachments?: DocAttachment[];
   createdAt: number;
   createdBy: string;
   updatedAt: number;
@@ -42,10 +58,16 @@ export interface LibraryDocFormValues {
   docForm: DocForm;
   category: DocCategory;
   driveUrl: string;
+  attachments?: DocAttachment[];
 }
+
+export type DocSort = 'newest' | 'oldest' | 'title';
 
 export interface LibraryFilter {
   category: DocCategory | 'all';
   docForm: DocForm | 'all';
+  /** Năm học theo ngày đăng, VD "2026-2027". */
+  schoolYear: string | 'all';
   keyword: string;
+  sort: DocSort;
 }

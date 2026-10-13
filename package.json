@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "preview": "vite preview",
     "check:rules": "node scripts/check-firebase-sync.mjs",
-    "deploy:rules": "node scripts/check-firebase-sync.mjs && firebase deploy --only firestore:rules --project bieu-quyet-c964c"
+    "deploy:rules": "node scripts/check-firebase-sync.mjs && firebase deploy --only firestore:rules,storage --project bieu-quyet-c964c"
   },
   "dependencies": {
     "@ant-design/icons": "6.3.2",

@@ -2,7 +2,9 @@ import {
   arrayRemove,
   arrayUnion,
   collection,
+  deleteField,
   doc,
+  FieldPath,
   getDoc,
   getDocs,
   orderBy,
@@ -13,7 +15,9 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { SLUG_MAX_LENGTH } from '../utils/text';
-import type { School, SchoolFormValues } from '../types';
+import type { EditorRole } from '../constants/editorRoles';
+import type { School, SchoolEditor, SchoolFormValues } from '../types';
+import { deleteStoredFilesOf } from './uploadService';
 
 // Tiền tố "vb" để không đụng collection của app Biểu quyết dùng chung project.
 const SCHOOLS = 'vbSchools';
@@ -64,7 +68,13 @@ export async function listMySchools(email: string): Promise<School[]> {
  * CÙNG 1 batch (rules kiểm chéo 2 doc bằng getAfter). Slug là doc ID nên trùng
  * trường khác thì rules chặn (set lên doc có sẵn = update, người lạ không có quyền).
  */
-export async function registerSchool(slug: string, values: SchoolFormValues, uid: string, email: string): Promise<void> {
+export async function registerSchool(
+  slug: string,
+  values: SchoolFormValues,
+  uid: string,
+  email: string,
+  role: EditorRole
+): Promise<void> {
   if (!(await isSlugAvailable(slug))) throw new SlugTakenError(slug);
   const now = Date.now();
   const batch = writeBatch(db);
@@ -76,7 +86,8 @@ export async function registerSchool(slug: string, values: SchoolFormValues, uid
     createdAt: now,
     updatedAt: now,
   });
-  batch.set(doc(db, EDITORS, slug), { emails: [email.toLowerCase()], updatedAt: now });
+  const myEmail = email.toLowerCase();
+  batch.set(doc(db, EDITORS, slug), { emails: [myEmail], roles: { [myEmail]: role }, updatedAt: now });
   try {
     await batch.commit();
   } catch (err) {
@@ -94,22 +105,50 @@ export async function updateSchoolInfo(slug: string, values: SchoolFormValues): 
   });
 }
 
-export async function getSchoolEditors(slug: string): Promise<string[]> {
+/**
+ * Thứ tự = thứ tự thêm (người đăng ký trường đứng đầu). `roles` là map
+ * email → vai trò; ghi bằng FieldPath vì email có dấu chấm.
+ */
+export async function getSchoolEditors(slug: string): Promise<SchoolEditor[]> {
   const snap = await getDoc(doc(db, EDITORS, slug));
-  return snap.exists() ? ((snap.data().emails as string[]) ?? []) : [];
+  if (!snap.exists()) return [];
+  const data = snap.data();
+  const roles = (data.roles as Record<string, EditorRole> | undefined) ?? {};
+  return ((data.emails as string[]) ?? []).map((email) => ({ email, role: roles[email] }));
 }
 
-export async function addSchoolEditor(slug: string, email: string): Promise<void> {
-  await updateDoc(doc(db, EDITORS, slug), { emails: arrayUnion(email.trim().toLowerCase()), updatedAt: Date.now() });
+export async function addSchoolEditor(slug: string, email: string, role: EditorRole): Promise<void> {
+  const normalized = email.trim().toLowerCase();
+  await updateDoc(
+    doc(db, EDITORS, slug),
+    'emails',
+    arrayUnion(normalized),
+    new FieldPath('roles', normalized),
+    role,
+    'updatedAt',
+    Date.now()
+  );
+}
+
+export async function setSchoolEditorRole(slug: string, email: string, role: EditorRole): Promise<void> {
+  await updateDoc(doc(db, EDITORS, slug), new FieldPath('roles', email), role, 'updatedAt', Date.now());
 }
 
 export async function removeSchoolEditor(slug: string, email: string): Promise<void> {
-  await updateDoc(doc(db, EDITORS, slug), { emails: arrayRemove(email), updatedAt: Date.now() });
+  await updateDoc(
+    doc(db, EDITORS, slug),
+    'emails',
+    arrayRemove(email),
+    new FieldPath('roles', email),
+    deleteField(),
+    'updatedAt',
+    Date.now()
+  );
 }
 
 /**
  * Xoá hẳn 1 trường: mọi văn bản (theo mẻ ≤ 450 thao tác/batch) rồi tới doc
- * trường + danh sách email. File trên Drive KHÔNG bị ảnh hưởng.
+ * trường + danh sách email. File trên Drive KHÔNG bị ảnh hưởng; tệp tải lên Storage thì xoá theo.
  */
 export async function deleteSchool(slug: string): Promise<void> {
   const docsSnap = await getDocs(collection(db, SCHOOLS, slug, 'docs'));
@@ -123,4 +162,5 @@ export async function deleteSchool(slug: string): Promise<void> {
   batch.delete(doc(db, SCHOOLS, slug));
   batch.delete(doc(db, EDITORS, slug));
   await batch.commit();
+  await Promise.all(docsSnap.docs.map((d) => deleteStoredFilesOf(d.data())));
 }

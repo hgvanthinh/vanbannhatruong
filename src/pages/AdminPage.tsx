@@ -5,14 +5,20 @@ import { DeleteOutlined, ExportOutlined, SearchOutlined } from '@ant-design/icon
 import dayjs from 'dayjs';
 import { useAuth } from '../auth/AuthContext';
 import { PageShell } from '../components/PageShell';
+import { getEditorRoleLabel } from '../constants/editorRoles';
 import { getLevelLabel } from '../constants/schoolLevels';
 import { isAdminEmail } from '../constants/site';
 import { deleteSchool, getSchoolEditors, listSchools } from '../services/schoolService';
 import { normalizeVi } from '../utils/text';
-import type { School } from '../types';
+import type { School, SchoolEditor } from '../types';
 
 interface AdminRow extends School {
-  editors: string[];
+  editors: SchoolEditor[];
+}
+
+function formatEditor({ email, role }: SchoolEditor): string {
+  const label = getEditorRoleLabel(role);
+  return label ? `${email} (${label})` : email;
 }
 
 /**
@@ -68,7 +74,7 @@ export function AdminPage() {
 
   const kw = normalizeVi(keyword);
   const visible = kw
-    ? rows.filter((r) => normalizeVi(`${r.name} ${r.area} ${r.slug} ${r.editors.join(' ')}`).includes(kw))
+    ? rows.filter((r) => normalizeVi(`${r.name} ${r.area} ${r.slug} ${r.editors.map(formatEditor).join(' ')}`).includes(kw))
     : rows;
 
   return (
@@ -99,7 +105,9 @@ export function AdminPage() {
             {
               title: 'Người quản lý',
               dataIndex: 'editors',
-              render: (emails: string[]) => <span style={{ whiteSpace: 'pre-line' }}>{emails.join('\n')}</span>,
+              render: (editors: SchoolEditor[]) => (
+                <span style={{ whiteSpace: 'pre-line' }}>{editors.map(formatEditor).join('\n')}</span>
+              ),
             },
             {
               title: 'Ngày đăng ký',

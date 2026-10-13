@@ -1,11 +1,11 @@
 // Project Firebase "bieu-quyet-c964c" dùng chung với repo bieu-quyet-hoi-nghi.
 // Deploy rules từ 1 repo sẽ GHI ĐÈ TOÀN BỘ rules của project — nên firestore.rules
-// phải giống hệt nhau ở cả 2 repo, lệch là chặn deploy.
+// (và storage.rules) phải giống hệt nhau ở cả 2 repo, lệch là chặn deploy.
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const SIBLING = resolve(import.meta.dirname, '../../bieu-quyet-hoi-nghi');
-const FILES = ['firestore.rules'];
+const FILES = ['firestore.rules', 'storage.rules'];
 
 if (!existsSync(SIBLING)) {
   console.error(`Không tìm thấy repo dùng chung: ${SIBLING}`);
@@ -22,4 +22,4 @@ if (mismatched.length > 0) {
   console.error('Đồng bộ cả 2 repo trước khi deploy.');
   process.exit(1);
 }
-console.log('firestore.rules khớp giữa vanbannhatruong và bieu-quyet-hoi-nghi.');
+console.log('firestore.rules + storage.rules khớp giữa vanbannhatruong và bieu-quyet-hoi-nghi.');

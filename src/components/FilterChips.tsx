@@ -13,7 +13,8 @@ interface FilterChipsProps<V extends string> {
 
 /**
  * Hàng chip lọc, cuộn ngang trên điện thoại thay vì xuống dòng — giữ danh sách
- * văn bản luôn ở gần đầu màn hình. Dùng chung cho hàng Loại và hàng Hình thức.
+ * luôn ở gần đầu màn hình. Hợp với ít lựa chọn (Cấp học ở trang chọn trường);
+ * kho văn bản nhiều lựa chọn hơn nên dùng ô chọn ở LibraryFilterBar.
  */
 export function FilterChips<V extends string>({ label, options, value, onChange, facet }: FilterChipsProps<V>) {
   const items: Array<{ value: V | 'all'; label: string; count: number }> = [

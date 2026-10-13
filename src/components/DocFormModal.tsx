@@ -1,12 +1,32 @@
-import { useState } from 'react';
-import { Alert, Form, Input, Select } from 'antd';
+import { useMemo, useState } from 'react';
+import { Alert, AutoComplete, Button, Col, Form, Input, Row, Select, Space, Typography } from 'antd';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { ResponsiveModal } from './ResponsiveModal';
+import { StorageUploadButton } from './StorageUploadButton';
 import { DOC_CATEGORIES } from '../constants/docCategories';
-import { DEFAULT_DOC_FORM, DOC_FORMS } from '../constants/docForms';
-import { isGoogleDriveUrl, isHttpsUrl } from '../utils/text';
+import { DOC_FORMS } from '../constants/docForms';
+import { getDocTitleSuggestions } from '../constants/docTitleSuggestions';
+import { MAX_ATTACHMENTS } from '../services/docService';
+import { isStoredFileUrl } from '../services/uploadService';
+import { getLastDocChoice, setLastDocChoice } from '../utils/lastDocChoice';
+import { isGoogleDriveUrl, isHttpsUrl, normalizeVi } from '../utils/text';
 import type { LibraryDoc, LibraryDocFormValues } from '../types';
 
+const MAX_SUGGESTIONS = 12;
+
+const httpsRule = {
+  validator: (_: unknown, value: string | undefined) =>
+    !value || isHttpsUrl(value) ? Promise.resolve() : Promise.reject(new Error('Link phải bắt đầu bằng https://')),
+};
+
+/** Tên tệp bỏ đuôi — làm tên mặc định khi tải tệp lên mà chưa gõ tên. */
+function fileBaseName(file: File): string {
+  return file.name.replace(/.[^.]+$/, '').slice(0, 200);
+}
+
 interface DocFormModalProps {
+  /** Trường đang đăng — thư mục chứa tệp khi tải thẳng lên Storage. */
+  slug: string;
   open: boolean;
   /** Có = sửa văn bản này; null = đăng mới. */
   editing: LibraryDoc | null;
@@ -14,13 +34,40 @@ interface DocFormModalProps {
   onSubmit: (values: LibraryDocFormValues) => Promise<void>;
 }
 
-export function DocFormModal({ open, editing, onCancel, onSubmit }: DocFormModalProps) {
+export function DocFormModal({ slug, open, editing, onCancel, onSubmit }: DocFormModalProps) {
   const [form] = Form.useForm<LibraryDocFormValues>();
   const [loading, setLoading] = useState(false);
   const driveUrl = Form.useWatch('driveUrl', form) ?? '';
+  const title = Form.useWatch('title', form) ?? '';
+
+  // Tính lại mỗi lần mở modal để năm học trong gợi ý luôn đúng.
+  const suggestions = useMemo(
+    () => getDocTitleSuggestions().map((s) => ({ ...s, search: normalizeVi(s.title) })),
+    [open],
+  );
+
+  // Gõ không dấu, các từ không cần liền nhau: "kh kiem tra" → "Kế hoạch kiểm tra nội bộ…".
+  const titleOptions = useMemo(() => {
+    const words = normalizeVi(title).split(/\s+/).filter(Boolean);
+    if (words.length === 0) return [];
+    return suggestions
+      .filter((s) => s.title !== title && words.every((w) => s.search.includes(w)))
+      .slice(0, MAX_SUGGESTIONS)
+      .map((s) => ({ value: s.title, label: s.title }));
+  }, [title, suggestions]);
+
+  /** Chọn gợi ý → tự đặt Hình thức theo chữ đầu tên (và Loại theo gợi ý). */
+  function handleSelectTitle(value: string) {
+    const picked = suggestions.find((s) => s.title === value);
+    if (!picked) return;
+    const docForm = DOC_FORMS.find((f) => picked.search.startsWith(normalizeVi(f.label) + ' '));
+    if (docForm) form.setFieldValue('docForm', docForm.value);
+    form.setFieldValue('category', picked.category ?? DOC_CATEGORIES[0].value);
+  }
 
   async function handleOk() {
     const values = await form.validateFields();
+    if (!editing) setLastDocChoice(values.docForm, values.category);
     setLoading(true);
     try {
       await onSubmit(values);
@@ -37,6 +84,7 @@ export function DocFormModal({ open, editing, onCancel, onSubmit }: DocFormModal
       onOk={handleOk}
       okText={editing ? 'Lưu' : 'Đăng'}
       confirmLoading={loading}
+      width={760}
       destroyOnHidden
     >
       <Form
@@ -52,8 +100,9 @@ export function DocFormModal({ open, editing, onCancel, onSubmit }: DocFormModal
                 docForm: editing.docForm,
                 category: editing.category,
                 driveUrl: editing.driveUrl,
+                attachments: editing.attachments ?? [],
               }
-            : { docForm: DEFAULT_DOC_FORM, category: DOC_CATEGORIES[0].value }
+            : getLastDocChoice()
         }
       >
         <Form.Item
@@ -64,37 +113,125 @@ export function DocFormModal({ open, editing, onCancel, onSubmit }: DocFormModal
             { max: 200, message: 'Tối đa 200 ký tự' },
           ]}
         >
-          <Input placeholder="VD: Kế hoạch năm học 2026-2027" maxLength={200} />
+          <AutoComplete
+            options={titleOptions}
+            onSelect={handleSelectTitle}
+            placeholder="Gõ để chọn tên có sẵn, VD: ke hoach nam hoc"
+            maxLength={200}
+            allowClear
+          />
         </Form.Item>
 
-        <Form.Item name="docForm" label="Hình thức văn bản" rules={[{ required: true }]}>
-          <Select options={DOC_FORMS.map((f) => ({ value: f.value, label: f.label }))} />
-        </Form.Item>
-
-        <Form.Item name="category" label="Loại văn bản" rules={[{ required: true }]}>
-          <Select options={DOC_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))} />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <Form.Item name="docForm" label="Hình thức văn bản" rules={[{ required: true }]}>
+              <Select options={DOC_FORMS.map((f) => ({ value: f.value, label: f.label }))} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item name="category" label="Loại văn bản" rules={[{ required: true }]}>
+              <Select options={DOC_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))} />
+            </Form.Item>
+          </Col>
+        </Row>
 
         <Form.Item
-          name="driveUrl"
           label="Link chia sẻ Google Drive"
-          rules={[
-            { required: true, whitespace: true, message: 'Dán link chia sẻ từ Drive' },
-            {
-              validator: (_, value: string | undefined) =>
-                !value || isHttpsUrl(value)
-                  ? Promise.resolve()
-                  : Promise.reject(new Error('Link phải bắt đầu bằng https://')),
-            },
-          ]}
+          required
           extra={
-            driveUrl && isHttpsUrl(driveUrl) && !isGoogleDriveUrl(driveUrl)
+            driveUrl && isHttpsUrl(driveUrl) && !isGoogleDriveUrl(driveUrl) && !isStoredFileUrl(driveUrl)
               ? 'Link này không phải Google Drive — vẫn lưu được, nhưng hãy kiểm tra lại.'
               : undefined
           }
         >
-          <Input placeholder="https://drive.google.com/... hoặc https://docs.google.com/..." />
+          <Space.Compact block>
+            <Form.Item
+              name="driveUrl"
+              noStyle
+              rules={[
+                { required: true, whitespace: true, message: 'Dán link chia sẻ từ Drive' },
+                httpsRule,
+              ]}
+            >
+              <Input placeholder="https://drive.google.com/... hoặc https://docs.google.com/..." />
+            </Form.Item>
+            <StorageUploadButton
+              slug={slug}
+              onUploaded={(url, file) => {
+                form.setFieldValue('driveUrl', url);
+                if (!form.getFieldValue('title')?.trim()) form.setFieldValue('title', fileBaseName(file));
+                form.validateFields(['driveUrl']);
+              }}
+            />
+          </Space.Compact>
         </Form.Item>
+
+        <Form.List name="attachments">
+          {(fields, { add, remove }) => (
+            <div style={{ marginBottom: 16 }}>
+              <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>
+                Phụ lục / văn bản kèm theo{' '}
+                <Typography.Text type="secondary" style={{ fontWeight: 'normal' }}>
+                  (không bắt buộc)
+                </Typography.Text>
+              </Typography.Text>
+              {fields.map((field, index) => (
+                <Row key={field.key} gutter={8} wrap={false} align="top">
+                  <Col flex="1">
+                    <Row gutter={8}>
+                      <Col xs={24} sm={9}>
+                        <Form.Item
+                          name={[field.name, 'name']}
+                          rules={[{ max: 200, message: 'Tối đa 200 ký tự' }]}
+                          style={{ marginBottom: 8 }}
+                        >
+                          <Input placeholder={`Phụ lục ${index + 1}`} maxLength={200} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} sm={15}>
+                        <Form.Item style={{ marginBottom: 8 }}>
+                          <Space.Compact block>
+                            <Form.Item
+                              name={[field.name, 'url']}
+                              noStyle
+                              rules={[{ required: true, whitespace: true, message: 'Dán link Drive của phụ lục' }, httpsRule]}
+                            >
+                              <Input placeholder="Link chia sẻ Google Drive" />
+                            </Form.Item>
+                            <StorageUploadButton
+                              slug={slug}
+                              label="Tệp"
+                              onUploaded={(url, file) => {
+                                form.setFieldValue(['attachments', field.name, 'url'], url);
+                                if (!form.getFieldValue(['attachments', field.name, 'name'])?.trim())
+                                  form.setFieldValue(['attachments', field.name, 'name'], fileBaseName(file));
+                                form.validateFields([['attachments', field.name, 'url']]);
+                              }}
+                            />
+                          </Space.Compact>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </Col>
+                  <Col flex="none">
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      aria-label={`Bỏ phụ lục ${index + 1}`}
+                      onClick={() => remove(field.name)}
+                    />
+                  </Col>
+                </Row>
+              ))}
+              {fields.length < MAX_ATTACHMENTS && (
+                <Button type="dashed" block icon={<PlusOutlined />} onClick={() => add({ name: '', url: '' })}>
+                  Thêm phụ lục / văn bản kèm theo
+                </Button>
+              )}
+            </div>
+          )}
+        </Form.List>
       </Form>
 
       <Alert

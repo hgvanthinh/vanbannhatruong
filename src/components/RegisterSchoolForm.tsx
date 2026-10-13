@@ -1,9 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, App, Button, Card, Form, Input, Select, Typography } from 'antd';
+import { ExistingSchoolList, ExistingSchoolRow, findSimilarSchools } from './ExistingSchools';
+import { EDITOR_ROLE_OPTIONS, type EditorRole } from '../constants/editorRoles';
 import { SCHOOL_LEVELS } from '../constants/schoolLevels';
-import { SlugTakenError, findAvailableSlug, isSlugAvailable, registerSchool } from '../services/schoolService';
+import {
+  SlugTakenError,
+  findAvailableSlug,
+  isSlugAvailable,
+  listSchools,
+  registerSchool,
+} from '../services/schoolService';
 import { isValidSlug, sanitizeSlugInput, suggestSlugBase, toSlug, SLUG_MIN_LENGTH } from '../utils/text';
-import type { SchoolFormValues } from '../types';
+import type { School, SchoolFormValues } from '../types';
 
 interface RegisterSchoolFormProps {
   uid: string;
@@ -15,6 +23,8 @@ interface RegisterSchoolFormProps {
 
 interface FormValues extends SchoolFormValues {
   slug: string;
+  /** Vai trò của chính người đăng ký — không phải ai đăng ký cũng là HT. */
+  role: EditorRole;
 }
 
 /**
@@ -28,6 +38,17 @@ export function RegisterSchoolForm({ uid, email, onRegistered, onCancel }: Regis
   const [saving, setSaving] = useState(false);
   // Người dùng đã tự sửa ô đường dẫn → thôi không ghi đè bằng gợi ý nữa.
   const [slugTouched, setSlugTouched] = useState(false);
+  // Trường đã có — để người đăng ký tự kiểm tra trường mình có chưa (tránh đăng ký trùng).
+  const [existing, setExisting] = useState<School[] | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const nameValue = Form.useWatch('name', form);
+  const similar = useMemo(() => findSimilarSchools(existing ?? [], nameValue), [existing, nameValue]);
+
+  useEffect(() => {
+    listSchools()
+      .then(setExisting)
+      .catch(() => setExisting(null));
+  }, []);
 
   async function suggestSlug() {
     if (slugTouched) return;
@@ -44,7 +65,7 @@ export function RegisterSchoolForm({ uid, email, onRegistered, onCancel }: Regis
     const slug = toSlug(values.slug);
     setSaving(true);
     try {
-      await registerSchool(slug, values, uid, email);
+      await registerSchool(slug, values, uid, email, values.role);
       message.success('Đã đăng ký trường');
       onRegistered(slug);
     } catch (err) {
@@ -63,9 +84,21 @@ export function RegisterSchoolForm({ uid, email, onRegistered, onCancel }: Regis
       <Alert
         type="info"
         showIcon
-        style={{ marginBottom: 16 }}
-        title="Nếu trường đã có trên hệ thống, đừng đăng ký lại — hãy nhờ người đang quản lý trường thêm email của bạn."
+        style={{ marginBottom: showAll ? 8 : 16 }}
+        title="Nếu trường đã có trên hệ thống, đừng đăng ký lại — hãy nhờ người đang quản lý trường (HT, văn thư, phụ trách CNTT...) thêm email của bạn."
+        description={
+          existing && (
+            <Button size="small" style={{ marginTop: 4 }} onClick={() => setShowAll((v) => !v)}>
+              {showAll ? 'Ẩn danh sách' : `Xem danh sách trường đã có (${existing.length})`}
+            </Button>
+          )
+        }
       />
+      {showAll && existing && (
+        <div style={{ marginBottom: 16 }}>
+          <ExistingSchoolList schools={existing} />
+        </div>
+      )}
       <Form<FormValues> form={form} layout="vertical" initialValues={{ level: 'thcs', area: '' }} onFinish={handleFinish}>
         <Form.Item
           name="name"
@@ -77,6 +110,26 @@ export function RegisterSchoolForm({ uid, email, onRegistered, onCancel }: Regis
         >
           <Input placeholder="VD: Trường THCS Nguyễn Trãi" maxLength={150} onBlur={suggestSlug} />
         </Form.Item>
+        {similar.length > 0 && (
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginTop: -8, marginBottom: 16 }}
+            title={`Đã có ${similar.length} trường tên gần giống — kiểm tra xem có phải trường của bạn không`}
+            description={
+              <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+                {similar.slice(0, 10).map((s) => (
+                  <ExistingSchoolRow key={s.slug} school={s} />
+                ))}
+                {similar.length > 10 && (
+                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+                    … và {similar.length - 10} trường khác, gõ tên đầy đủ hơn để thu hẹp
+                  </Typography.Text>
+                )}
+              </div>
+            }
+          />
+        )}
         <Form.Item name="level" label="Cấp học" rules={[{ required: true }]}>
           <Select options={SCHOOL_LEVELS.map((l) => ({ value: l.value, label: l.label }))} />
         </Form.Item>
@@ -111,6 +164,14 @@ export function RegisterSchoolForm({ uid, email, onRegistered, onCancel }: Regis
           validateTrigger={['onChange', 'onBlur']}
         >
           <Input prefix="/truong/" placeholder="thcs-nguyen-trai" maxLength={60} onChange={() => setSlugTouched(true)} />
+        </Form.Item>
+        <Form.Item
+          name="role"
+          label="Vai trò của bạn trong trường"
+          extra={`Sau khi đăng ký, bạn thêm được email Google của người khác (HT, Phó HT, văn thư...) để cùng đăng văn bản. Đăng nhập bằng: ${email}`}
+          rules={[{ required: true, message: 'Chọn vai trò' }]}
+        >
+          <Select placeholder="Chọn vai trò" options={EDITOR_ROLE_OPTIONS} />
         </Form.Item>
         <div style={{ display: 'flex', gap: 8 }}>
           <Button type="primary" htmlType="submit" loading={saving}>

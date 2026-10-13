@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import { getCategoryMeta } from '../constants/docCategories';
 import { getDocFormMeta } from '../constants/docForms';
 import { buildDriveDownloadUrl } from '../utils/driveLinks';
+import { AttachmentList } from './AttachmentList';
 import type { LibraryDoc } from '../types';
 
 /**
@@ -51,6 +52,11 @@ export function PublicDocCard({ doc }: { doc: LibraryDoc }) {
           </Button>
         )}
       </div>
+      {!!doc.attachments?.length && (
+        <div style={{ marginTop: 10, paddingTop: 8, paddingLeft: 34, borderTop: '1px dashed #f0f0f0' }}>
+          <AttachmentList attachments={doc.attachments} />
+        </div>
+      )}
     </Card>
   );
 }
