@@ -46,3 +46,55 @@ export function buildDriveDownloadUrl(shareUrl: string): string | null {
 
   return null;
 }
+
+/**
+ * Trình duyệt nhúng trong app chat (Zalo, Facebook/Messenger, Instagram). Ở đây
+ * trang /view của Drive hay không hiển thị được và rơi sang tải tệp luôn.
+ */
+export function isInAppBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Zalo|FBAN|FBAV|FB_IAB|Messenger|Instagram/i.test(navigator.userAgent);
+}
+
+/**
+ * Đổi link Drive/Docs sang trang /preview (trình xem dạng nhúng, chạy được trong
+ * WebView của app). Giữ `resourcekey` của link chia sẻ cũ. Link khác (thư mục,
+ * không phải Google) giữ nguyên.
+ */
+export function buildDrivePreviewUrl(shareUrl: string): string {
+  let url: URL;
+  try {
+    url = new URL(shareUrl.trim());
+  } catch {
+    return shareUrl;
+  }
+
+  const resourceKey = url.searchParams.get('resourcekey');
+  const withKey = (base: string) => (resourceKey ? `${base}?resourcekey=${encodeURIComponent(resourceKey)}` : base);
+  const filePreview = (id: string) => withKey(`https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`);
+
+  if (url.hostname === 'drive.google.com') {
+    const fileMatch = url.pathname.match(/^\/file\/d\/([^/]+)/);
+    if (fileMatch) return filePreview(fileMatch[1]);
+    const id = url.searchParams.get('id');
+    if (id && (url.pathname === '/open' || url.pathname === '/uc')) return filePreview(id);
+    return shareUrl;
+  }
+
+  if (url.hostname === 'docs.google.com') {
+    const match = url.pathname.match(/^\/(document|spreadsheets|presentation)\/d\/([^/]+)/);
+    if (!match) return shareUrl;
+    const [, kind, id] = match;
+    if (id === 'e') return shareUrl;
+    // File Office tải lên (mở bằng trình soạn Docs) xem qua trình xem của Drive.
+    if (url.searchParams.get('rtpof') === 'true') return filePreview(id);
+    return withKey(`https://docs.google.com/${kind}/d/${encodeURIComponent(id)}/preview`);
+  }
+
+  return shareUrl;
+}
+
+/** Link "mở xem" cho người xem công khai: trong app chat dùng /preview, ngoài ra giữ link gốc. */
+export function buildDocViewUrl(shareUrl: string): string {
+  return isInAppBrowser() ? buildDrivePreviewUrl(shareUrl) : shareUrl;
+}

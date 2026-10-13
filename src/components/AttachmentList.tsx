@@ -1,6 +1,6 @@
 import { Button, Typography } from 'antd';
 import { DownloadOutlined, PaperClipOutlined } from '@ant-design/icons';
-import { buildDriveDownloadUrl } from '../utils/driveLinks';
+import { buildDocViewUrl, buildDriveDownloadUrl } from '../utils/driveLinks';
 import type { DocAttachment } from '../types';
 
 /**
@@ -19,7 +19,7 @@ export function AttachmentList({ attachments, newTab = false }: { attachments: D
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             <PaperClipOutlined style={{ color: '#8c8c8c', flexShrink: 0 }} />
             <Typography.Link
-              href={a.url}
+              href={newTab ? a.url : buildDocViewUrl(a.url)}
               target={target}
               rel="noopener noreferrer"
               style={{ flex: 1, minWidth: 0, wordBreak: 'break-word' }}

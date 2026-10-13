@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Result, Spin } from 'antd';
 import { getLibraryDoc } from '../services/docService';
+import { buildDocViewUrl } from '../utils/driveLinks';
 
 type State = { kind: 'loading' } | { kind: 'redirecting'; title: string } | { kind: 'missing' } | { kind: 'error' };
 
@@ -24,7 +25,8 @@ export function DocRedirectPage() {
         }
         setState({ kind: 'redirecting', title: d.title });
         // replace: Back từ Drive không quay lại trang trung gian này rồi bị đẩy đi tiếp.
-        window.location.replace(d.driveUrl);
+        // Quét QR bằng Zalo thì mở trong WebView của Zalo → dùng trang /preview.
+        window.location.replace(buildDocViewUrl(d.driveUrl));
       })
       .catch(() => setState({ kind: 'error' }));
   }, [slug, docId]);

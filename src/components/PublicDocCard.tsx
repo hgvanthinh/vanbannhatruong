@@ -3,7 +3,7 @@ import { DownloadOutlined, FileTextOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getCategoryMeta } from '../constants/docCategories';
 import { getDocFormMeta } from '../constants/docForms';
-import { buildDriveDownloadUrl } from '../utils/driveLinks';
+import { buildDocViewUrl, buildDriveDownloadUrl } from '../utils/driveLinks';
 import { AttachmentList } from './AttachmentList';
 import type { LibraryDoc } from '../types';
 
@@ -20,7 +20,7 @@ export function PublicDocCard({ doc }: { doc: LibraryDoc }) {
     <Card size="small" hoverable styles={{ body: { padding: 14 } }}>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         <a
-          href={doc.driveUrl}
+          href={buildDocViewUrl(doc.driveUrl)}
           rel="noopener noreferrer"
           style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flex: 1, minWidth: 0, color: 'inherit' }}
         >
