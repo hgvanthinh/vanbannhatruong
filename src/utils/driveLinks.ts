@@ -1,3 +1,5 @@
+import { isStoredFileUrl } from '../services/uploadService';
+
 /**
  * Đổi link chia sẻ Google Drive/Docs thành link TẢI XUỐNG trực tiếp. Trả null
  * khi không tải được bằng link (thư mục Drive, link không phải Google) — UI ẩn
@@ -94,7 +96,23 @@ export function buildDrivePreviewUrl(shareUrl: string): string {
   return shareUrl;
 }
 
-/** Link "mở xem" cho người xem công khai: trong app chat dùng /preview, ngoài ra giữ link gốc. */
+/**
+ * Tệp tải lên Storage (link firebasestorage): WebView của app không tự hiển thị
+ * PDF/Office nên luôn tải xuống → mở qua trình xem trực tuyến. PDF dùng Google
+ * Docs Viewer; Word/Excel/PowerPoint dùng Office Online (hiển thị Office tốt
+ * hơn). Ảnh, tệp khác giữ link gốc (WebView tự hiển thị được ảnh).
+ */
+export function buildStoredFileViewUrl(fileUrl: string): string {
+  const name = decodeURIComponent(new URL(fileUrl).pathname.split('/').pop() ?? '');
+  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+  const src = encodeURIComponent(fileUrl);
+  if (ext === 'pdf') return `https://docs.google.com/viewer?embedded=true&url=${src}`;
+  if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) return `https://view.officeapps.live.com/op/view.aspx?src=${src}`;
+  return fileUrl;
+}
+
+/** Link "mở xem" cho người xem công khai: trong app chat đổi sang trang xem được trong WebView, ngoài ra giữ link gốc. */
 export function buildDocViewUrl(shareUrl: string): string {
-  return isInAppBrowser() ? buildDrivePreviewUrl(shareUrl) : shareUrl;
+  if (!isInAppBrowser()) return shareUrl;
+  return isStoredFileUrl(shareUrl) ? buildStoredFileViewUrl(shareUrl) : buildDrivePreviewUrl(shareUrl);
 }

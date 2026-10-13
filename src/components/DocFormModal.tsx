@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Alert, AutoComplete, Button, Col, Form, Input, Row, Select, Space, Typography } from 'antd';
+import { Alert, AutoComplete, Button, Col, Form, Input, Row, Space, Typography } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { AddableSelect } from './AddableSelect';
 import { ResponsiveModal } from './ResponsiveModal';
 import { StorageUploadButton } from './StorageUploadButton';
 import { DOC_CATEGORIES } from '../constants/docCategories';
@@ -8,6 +9,7 @@ import { DOC_FORMS } from '../constants/docForms';
 import { getDocTitleSuggestions } from '../constants/docTitleSuggestions';
 import { MAX_ATTACHMENTS } from '../services/docService';
 import { isStoredFileUrl } from '../services/uploadService';
+import { categoryOptions, docFormOptions } from '../utils/docOptions';
 import { getLastDocChoice, setLastDocChoice } from '../utils/lastDocChoice';
 import { isGoogleDriveUrl, isHttpsUrl, normalizeVi } from '../utils/text';
 import type { LibraryDoc, LibraryDocFormValues } from '../types';
@@ -27,6 +29,8 @@ function fileBaseName(file: File): string {
 interface DocFormModalProps {
   /** Trường đang đăng — thư mục chứa tệp khi tải thẳng lên Storage. */
   slug: string;
+  /** Văn bản đã đăng của trường — lấy các Hình thức / Loại người quản lý từng tự thêm. */
+  docs: LibraryDoc[];
   open: boolean;
   /** Có = sửa văn bản này; null = đăng mới. */
   editing: LibraryDoc | null;
@@ -34,11 +38,16 @@ interface DocFormModalProps {
   onSubmit: (values: LibraryDocFormValues) => Promise<void>;
 }
 
-export function DocFormModal({ slug, open, editing, onCancel, onSubmit }: DocFormModalProps) {
+export function DocFormModal({ slug, docs, open, editing, onCancel, onSubmit }: DocFormModalProps) {
   const [form] = Form.useForm<LibraryDocFormValues>();
   const [loading, setLoading] = useState(false);
   const driveUrl = Form.useWatch('driveUrl', form) ?? '';
   const title = Form.useWatch('title', form) ?? '';
+  // Mục vừa thêm nhưng chưa có văn bản nào dùng — giữ đến khi tải lại trang.
+  const [addedForms, setAddedForms] = useState<string[]>([]);
+  const [addedCategories, setAddedCategories] = useState<string[]>([]);
+  const formOptions = useMemo(() => docFormOptions(docs, addedForms), [docs, addedForms]);
+  const categoryList = useMemo(() => categoryOptions(docs, addedCategories), [docs, addedCategories]);
 
   // Tính lại mỗi lần mở modal để năm học trong gợi ý luôn đúng.
   const suggestions = useMemo(
@@ -125,12 +134,20 @@ export function DocFormModal({ slug, open, editing, onCancel, onSubmit }: DocFor
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <Form.Item name="docForm" label="Hình thức văn bản" rules={[{ required: true }]}>
-              <Select options={DOC_FORMS.map((f) => ({ value: f.value, label: f.label }))} />
+              <AddableSelect
+                options={formOptions}
+                onAdd={(label) => setAddedForms((list) => [...list, label])}
+                addPlaceholder="Hình thức khác"
+              />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
             <Form.Item name="category" label="Loại văn bản" rules={[{ required: true }]}>
-              <Select options={DOC_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))} />
+              <AddableSelect
+                options={categoryList}
+                onAdd={(label) => setAddedCategories((list) => [...list, label])}
+                addPlaceholder="Loại khác"
+              />
             </Form.Item>
           </Col>
         </Row>

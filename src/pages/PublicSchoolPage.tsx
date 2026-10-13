@@ -6,12 +6,11 @@ import dayjs from 'dayjs';
 import { PageShell } from '../components/PageShell';
 import { LibraryFilterBar } from '../components/LibraryFilterBar';
 import { PublicDocCard } from '../components/PublicDocCard';
-import { DOC_CATEGORIES } from '../constants/docCategories';
-import { DOC_FORMS } from '../constants/docForms';
 import { getLevelLabel } from '../constants/schoolLevels';
 import { SITE_NAME } from '../constants/site';
 import { listDocs } from '../services/docService';
 import { getSchool } from '../services/schoolService';
+import { isValidOptionValue } from '../utils/docOptions';
 import { DOC_SORTS, EMPTY_FILTER, filterDocs, sortDocs } from '../utils/libraryFilter';
 import { clearLastSchool, setLastSchool } from '../utils/lastSchool';
 import { buildPrintListPath } from '../utils/printList';
@@ -31,10 +30,13 @@ function filterFromParams(params: URLSearchParams): LibraryFilter {
   const pick = <V extends string>(key: string, values: ReadonlyArray<{ value: V }>) =>
     values.find((v) => v.value === params.get(key))?.value;
   const year = params.get('namhoc') ?? '';
+  // Loại/Hình thức nhận cả mục tự thêm (value = tên mục) — chưa có văn bản thì chỉ ra 0 kết quả.
+  const loai = params.get('loai');
+  const hinhthuc = params.get('hinhthuc');
   return {
     keyword: params.get('q') ?? '',
-    category: pick('loai', DOC_CATEGORIES) ?? 'all',
-    docForm: pick('hinhthuc', DOC_FORMS) ?? 'all',
+    category: isValidOptionValue(loai) ? loai : 'all',
+    docForm: isValidOptionValue(hinhthuc) ? hinhthuc : 'all',
     schoolYear: /^\d{4}-\d{4}$/.test(year) ? year : 'all',
     sort: pick('sapxep', DOC_SORTS) ?? EMPTY_FILTER.sort,
   };

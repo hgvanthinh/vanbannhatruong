@@ -1,7 +1,7 @@
 /**
  * Hình thức văn bản — danh sách CỐ ĐỊNH (giống DOC_CATEGORIES): bộ lọc gọn,
  * không bị gõ sai chính tả. Thêm hình thức mới chỉ cần thêm 1 dòng ở đây.
- * KHÔNG đổi `value` của hình thức đã dùng: doc cũ lưu value, đổi sẽ rơi vào "Khác".
+ * KHÔNG đổi `value` của hình thức đã dùng: doc cũ lưu value, đổi sẽ thành mục tự thêm.
  */
 export const DOC_FORMS = [
   { value: 'ke-hoach', label: 'Kế hoạch' },
@@ -27,6 +27,8 @@ export const DEFAULT_DOC_FORM: DocForm = 'ke-hoach';
 
 const FALLBACK_FORM = DOC_FORMS[DOC_FORMS.length - 1];
 
-export function getDocFormMeta(value: string | undefined) {
-  return DOC_FORMS.find((f) => f.value === value) ?? FALLBACK_FORM;
+/** Value lạ = hình thức người quản lý tự thêm (src/utils/docOptions.ts): tên chính là value. */
+export function getDocFormMeta(value: string | undefined): { value: string; label: string } {
+  if (!value) return FALLBACK_FORM;
+  return DOC_FORMS.find((f) => f.value === value) ?? { value, label: value };
 }

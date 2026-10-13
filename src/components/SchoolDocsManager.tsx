@@ -227,7 +227,7 @@ export function SchoolDocsManager({ school, uid }: { school: School; uid: string
         />
       )}
 
-      <DocFormModal slug={school.slug} open={formOpen} editing={editing} onCancel={() => setFormOpen(false)} onSubmit={handleSubmit} />
+      <DocFormModal slug={school.slug} docs={docs} open={formOpen} editing={editing} onCancel={() => setFormOpen(false)} onSubmit={handleSubmit} />
 
       <QrCodeModal
         open={!!qrTarget}

@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { Button, Input, Select, Space, Typography } from 'antd';
 import { CloseCircleOutlined, SearchOutlined, SortAscendingOutlined } from '@ant-design/icons';
-import { DOC_CATEGORIES } from '../constants/docCategories';
-import { DOC_FORMS } from '../constants/docForms';
+import { categoryOptions, docFormOptions } from '../utils/docOptions';
 import { DOC_SORTS, clearFilter, facetCounts, isFiltering, listSchoolYears, type FacetCounts } from '../utils/libraryFilter';
 import type { LibraryDoc, LibraryFilter } from '../types';
 
@@ -84,6 +83,9 @@ function FacetSelect({
 export function LibraryFilterBar({ docs, filter, onChange, resultCount, size = 'middle' }: LibraryFilterBarProps) {
   const facets = useMemo(() => facetCounts(docs, filter), [docs, filter]);
   const schoolYears = useMemo(() => listSchoolYears(docs), [docs]);
+  // Kèm các mục người quản lý tự thêm (có trong văn bản đã đăng).
+  const categories = useMemo(() => categoryOptions(docs), [docs]);
+  const docForms = useMemo(() => docFormOptions(docs), [docs]);
   const filtering = isFiltering(filter);
   // Cả kho chỉ trong 1 năm học thì ô Năm học vô nghĩa — ẩn cho gọn.
   const showSchoolYear = schoolYears.length > 1 || filter.schoolYear !== 'all';
@@ -106,14 +108,14 @@ export function LibraryFilterBar({ docs, filter, onChange, resultCount, size = '
               ariaLabel="Lọc theo loại"
               size={size}
               value={filter.category}
-              options={facetOptions('Tất cả loại', DOC_CATEGORIES, facets.category, filter.category)}
+              options={facetOptions('Tất cả loại', categories, facets.category, filter.category)}
               onChange={(category) => onChange({ ...filter, category: category as LibraryFilter['category'] })}
             />
             <FacetSelect
               ariaLabel="Lọc theo hình thức"
               size={size}
               value={filter.docForm}
-              options={facetOptions('Tất cả hình thức', DOC_FORMS, facets.docForm, filter.docForm)}
+              options={facetOptions('Tất cả hình thức', docForms, facets.docForm, filter.docForm)}
               onChange={(docForm) => onChange({ ...filter, docForm: docForm as LibraryFilter['docForm'] })}
             />
             {showSchoolYear && (

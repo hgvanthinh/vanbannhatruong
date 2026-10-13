@@ -1,5 +1,3 @@
-import type { DocCategory } from './constants/docCategories';
-import type { DocForm } from './constants/docForms';
 import type { EditorRole } from './constants/editorRoles';
 import type { SchoolLevel } from './constants/schoolLevels';
 
@@ -43,8 +41,9 @@ export interface DocAttachment {
 export interface LibraryDoc {
   id: string;
   title: string;
-  docForm: DocForm;
-  category: DocCategory;
+  /** Value trong DOC_FORMS / DOC_CATEGORIES, hoặc tên mục người quản lý tự thêm (utils/docOptions.ts). */
+  docForm: string;
+  category: string;
   driveUrl: string;
   /** Doc cũ có thể thiếu. Tối đa MAX_ATTACHMENTS (khớp vbValidAttachments() trong rules). */
   attachments?: DocAttachment[];
@@ -55,8 +54,8 @@ export interface LibraryDoc {
 
 export interface LibraryDocFormValues {
   title: string;
-  docForm: DocForm;
-  category: DocCategory;
+  docForm: string;
+  category: string;
   driveUrl: string;
   attachments?: DocAttachment[];
 }
@@ -64,8 +63,8 @@ export interface LibraryDocFormValues {
 export type DocSort = 'newest' | 'oldest' | 'title';
 
 export interface LibraryFilter {
-  category: DocCategory | 'all';
-  docForm: DocForm | 'all';
+  category: string | 'all';
+  docForm: string | 'all';
   /** Năm học theo ngày đăng, VD "2026-2027". */
   schoolYear: string | 'all';
   keyword: string;

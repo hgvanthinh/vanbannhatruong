@@ -6,7 +6,7 @@ Stack: React 19 + Vite + TypeScript + Ant Design v6 + Firebase (Auth Google + Fi
 
 Dựng 13/10/2026 từ tính năng "Kho văn bản" của repo `danh-gia-giao-vien`; đã deploy rules và chạy thử đầy đủ cùng ngày.
 
-**Đã chốt với user (đừng hỏi lại):** HT tự đăng ký trường (không qua Admin duyệt); nhiều email/trường, ngang quyền — mỗi email có Vai trò (người đăng ký tự chọn, không mặc định là HT) nhưng vai trò chỉ để hiển thị, không phân quyền; user tự lo hosting; loại + hình thức là danh sách cố định, hình thức mặc định "Kế hoạch".
+**Đã chốt với user (đừng hỏi lại):** HT tự đăng ký trường (không qua Admin duyệt); nhiều email/trường, ngang quyền — mỗi email có Vai trò (người đăng ký tự chọn, không mặc định là HT) nhưng vai trò chỉ để hiển thị, không phân quyền; user tự lo hosting; loại + hình thức là danh sách cố định (người quản lý tự thêm mục riêng được), hình thức mặc định "Kế hoạch".
 
 ## ⚠️ Project Firebase DÙNG CHUNG với app Biểu quyết hội nghị
 
@@ -29,6 +29,7 @@ Project `bieu-quyet-c964c` đồng thời phục vụ `E:\Website\bieu-quyet-hoi
 - "Trường của tôi" = query `vbSchoolEditors where emails array-contains email`.
 - Admin toàn hệ thống (dọn trường rác): `ADMIN_EMAILS` trong `src/constants/site.ts` **và** `vbIsAdmin()` trong rules — sửa cả 2 nơi.
 - Loại (`DOC_CATEGORIES`), Hình thức (`DOC_FORMS`, mặc định Kế hoạch), Cấp học (`SCHOOL_LEVELS`) là danh sách cố định trong `src/constants/` — rules không liệt kê cứng. Không đổi `value` đã dùng.
+- **Loại / Hình thức tự thêm**: cuối dropdown ở modal Đăng văn bản có ô "Thêm mục mới" (`AddableSelect`). Value = chính tên mục (VD `"Tờ khai"`, ≤50 ký tự, cấm dấu phẩy vì URL trang in dùng `?loai=a,b`), lưu thẳng vào `docForm`/`category` — không có collection riêng, rules không đổi. Danh sách mục tự thêm của trường = value lạ trong các văn bản đã đăng (`src/utils/docOptions.ts`), chèn trước "Khác" ở dropdown, bộ lọc, trang in; mục thêm mà chưa đăng văn bản nào thì mất khi tải lại trang. `getCategoryMeta`/`getDocFormMeta` gặp value lạ thì trả tên = value.
 - Gợi ý "Tên tài liệu" khi đăng văn bản: `src/constants/docTitleSuggestions.ts` (`{NH}` = năm học hiện tại, tháng 8 sang năm mới). Chọn gợi ý thì tự đặt Hình thức theo chữ đầu tên + Loại theo gợi ý.
 - Trang in danh sách `/truong/{slug}/in` (`PrintListPage` + `src/utils/printList.ts`): lọc nhiều Loại/Hình thức + khoảng ngày ĐĂNG + từ khoá, in/lưu PDF theo mẫu hồ sơ (STT, ngày đăng, tên loại – trích yếu, link, QR). Web không lưu số/ngày ban hành nên cột "Số, ký hiệu" chỉ để trống ghi tay. Nút "In danh sách" ở trang công khai + trang quản lý mang theo bộ lọc đang xem.
 - QR từng văn bản trỏ link trung gian `/vb/{slug}/{docId}` (đọc doc rồi `location.replace` sang Drive) để sửa link/gỡ văn bản thì QR đã in vẫn đúng. Link tải xuống sinh từ link Drive ở `src/utils/driveLinks.ts`.
@@ -37,6 +38,7 @@ Project `bieu-quyet-c964c` đồng thời phục vụ `E:\Website\bieu-quyet-hoi
 
 - Nút "Tải tệp lên" cạnh ô link (văn bản chính + từng phụ lục) chỉ hiện khi `import.meta.env.DEV` **và** đăng nhập email admin (`StorageUploadButton`, `UPLOAD_ENABLED` ở `src/services/uploadService.ts`). Bản build đưa lên host không có nút — user sợ người khác tải tệp nặng. Đừng bật ở production.
 - Tệp lưu `vb/{slug}/{timestamp}_{tên}`, ≤ `MAX_UPLOAD_MB` (25) — khớp khối `vb/` trong `storage.rules` (chỉ admin ghi/xoá, đọc công khai). Download URL lưu thẳng vào `driveUrl`/`attachments[].url` như link Drive, nên rules Firestore không đổi. Không có nút "Tải xuống" cho tệp Storage (`buildDriveDownloadUrl` trả null).
+- **Zalo / Facebook (trình duyệt trong app)**: `/view` của Drive và PDF/Office trên Storage đều bị tải xuống luôn → `buildDocViewUrl()` (`src/utils/driveLinks.ts`) đổi link xem: Drive → `/preview`; Storage PDF → Google Docs Viewer, Office → Office Online. Dùng ở trang công khai, phụ lục, QR (`/vb/...`). Trình duyệt thường giữ link gốc.
 - Xoá văn bản / xoá trường thì xoá luôn tệp Storage (best-effort, `deleteStoredFilesOf`). `firebase/storage` nạp động, không vào bundle chính.
 
 ## Ant Design v6 — tránh prop deprecated

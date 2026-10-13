@@ -1,6 +1,6 @@
-import { DOC_CATEGORIES, type DocCategory } from '../constants/docCategories';
-import { DOC_FORMS, getDocFormMeta, type DocForm } from '../constants/docForms';
+import { getDocFormMeta } from '../constants/docForms';
 import type { DocSort, LibraryDoc, LibraryFilter } from '../types';
+import { isValidOptionValue } from './docOptions';
 import { DOC_SORTS, EMPTY_FILTER, filterDocs, sortDocs } from './libraryFilter';
 import { normalizeVi } from './text';
 
@@ -11,8 +11,8 @@ import { normalizeVi } from './text';
  * để tải lại trang hay gửi link vẫn giữ nguyên.
  */
 export interface PrintOptions {
-  categories: DocCategory[];
-  docForms: DocForm[];
+  categories: string[];
+  docForms: string[];
   keyword: string;
   /** YYYY-MM-DD theo ngày ĐĂNG (createdAt) — web không có ngày ban hành. */
   from: string | null;
@@ -28,9 +28,9 @@ export const DEFAULT_PRINT_TITLE = 'DANH SÁCH VĂN BẢN';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-function pickList<V extends string>(raw: string | null, values: ReadonlyArray<{ value: V }>): V[] {
-  const wanted = new Set((raw ?? '').split(','));
-  return values.filter((v) => wanted.has(v.value)).map((v) => v.value);
+/** Nhận cả mục tự thêm (value = tên mục) nên không lọc theo danh sách cố định. */
+function pickList(raw: string | null): string[] {
+  return [...new Set((raw ?? '').split(','))].filter(isValidOptionValue);
 }
 
 export function printOptionsFromParams(params: URLSearchParams): PrintOptions {
@@ -39,8 +39,8 @@ export function printOptionsFromParams(params: URLSearchParams): PrintOptions {
     return v && DATE_PATTERN.test(v) ? v : null;
   };
   return {
-    categories: pickList(params.get('loai'), DOC_CATEGORIES),
-    docForms: pickList(params.get('hinhthuc'), DOC_FORMS),
+    categories: pickList(params.get('loai')),
+    docForms: pickList(params.get('hinhthuc')),
     keyword: params.get('q') ?? '',
     from: date('tu'),
     to: date('den'),

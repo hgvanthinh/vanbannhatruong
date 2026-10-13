@@ -3,12 +3,11 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Button, Card, Checkbox, Col, DatePicker, Empty, Input, QRCode, Result, Row, Select, Skeleton, Space, Typography } from 'antd';
 import { ArrowLeftOutlined, PrinterOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
-import { DOC_CATEGORIES } from '../constants/docCategories';
-import { DOC_FORMS } from '../constants/docForms';
 import { currentSchoolYear } from '../constants/docTitleSuggestions';
 import { buildDocUrl, SITE_NAME } from '../constants/site';
 import { listDocs } from '../services/docService';
 import { getSchool } from '../services/schoolService';
+import { categoryOptions, docFormOptions } from '../utils/docOptions';
 import { DOC_SORTS } from '../utils/libraryFilter';
 import { filterForPrint, printOptionsFromParams, printOptionsToParams, splitFormAndSummary, type PrintOptions } from '../utils/printList';
 import type { LibraryDoc, School } from '../types';
@@ -67,6 +66,9 @@ export function PrintListPage() {
   }, [school, options.title]);
 
   const rows = useMemo(() => filterForPrint(docs, options), [docs, options]);
+  // Kèm mục tự thêm có trong văn bản + mục đang chọn trên URL (để còn bỏ chọn được).
+  const categories = useMemo(() => categoryOptions(docs, options.categories), [docs, options.categories]);
+  const docForms = useMemo(() => docFormOptions(docs, options.docForms), [docs, options.docForms]);
   const set = (patch: Partial<PrintOptions>) => setOptions((o) => ({ ...o, ...patch }));
   const columnCount = 4 + (options.showNumber ? 1 : 0) + (options.showQr ? 1 : 0);
 
@@ -110,7 +112,7 @@ export function PrintListPage() {
                 placeholder="Tất cả loại"
                 value={options.categories}
                 onChange={(categories) => set({ categories })}
-                options={DOC_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
+                options={categories}
               />
             </Col>
             <Col xs={24} md={12}>
@@ -122,7 +124,7 @@ export function PrintListPage() {
                 placeholder="Tất cả hình thức"
                 value={options.docForms}
                 onChange={(docForms) => set({ docForms })}
-                options={DOC_FORMS.map((f) => ({ value: f.value, label: f.label }))}
+                options={docForms}
               />
             </Col>
             <Col xs={24} md={12}>
