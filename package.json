@@ -1,0 +1,31 @@
+{
+  "name": "vanbannhatruong",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "preview": "vite preview",
+    "check:rules": "node scripts/check-firebase-sync.mjs",
+    "deploy:rules": "node scripts/check-firebase-sync.mjs && firebase deploy --only firestore:rules --project bieu-quyet-c964c"
+  },
+  "dependencies": {
+    "@ant-design/icons": "6.3.2",
+    "antd": "6.5.0",
+    "dayjs": "1.11.21",
+    "firebase": "12.15.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "react-router-dom": "7.18.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.2",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
+    "typescript": "6.0.3",
+    "vite": "8.1.3"
+  }
+}

@@ -1,0 +1,17 @@
+:root {
+  --page-bg: #f5f7fa;
+  --header-bg: #ffffff;
+  --border: #f0f0f0;
+  --muted: #bfbfbf;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page-bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
