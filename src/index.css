@@ -56,17 +56,14 @@ body {
 }
 
 .print-table thead th {
-  background: #4472c4;
-  color: #fff;
+  background: #fff;
+  color: #000;
   font-size: 12px;
   font-weight: bold;
   text-align: center;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
 }
 
 .print-table thead th.print-title {
-  background: #1f4e79;
   font-size: 15px;
   padding: 8px;
 }
@@ -75,22 +72,10 @@ body {
   break-inside: avoid;
 }
 
-.print-table a {
-  color: #000;
-}
-
 .print-attachments {
   font-size: 12px;
   font-style: italic;
   margin-top: 2px;
-}
-
-.print-footer {
-  font-family: 'Times New Roman', Times, serif;
-  font-size: 12px;
-  font-style: italic;
-  margin-top: 6px;
-  color: #000;
 }
 
 @page {

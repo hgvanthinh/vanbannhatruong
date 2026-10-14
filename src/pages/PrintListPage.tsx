@@ -70,7 +70,7 @@ export function PrintListPage() {
   const categories = useMemo(() => categoryOptions(docs, options.categories), [docs, options.categories]);
   const docForms = useMemo(() => docFormOptions(docs, options.docForms), [docs, options.docForms]);
   const set = (patch: Partial<PrintOptions>) => setOptions((o) => ({ ...o, ...patch }));
-  const columnCount = 4 + (options.showNumber ? 1 : 0) + (options.showQr ? 1 : 0);
+  const columnCount = 3 +(options.showNumber ? 1 : 0) + (options.showQr ? 1 : 0);
 
   if (state === 'missing' || state === 'error') {
     return (
@@ -176,7 +176,6 @@ export function PrintListPage() {
                   {options.showNumber && <th style={{ width: 90 }}>Số, ký hiệu văn bản</th>}
                   <th style={{ width: 86 }}>Ngày đăng</th>
                   <th>Tên loại và trích yếu nội dung</th>
-                  <th style={{ width: 96 }}>Liên kết trực tiếp văn bản</th>
                   {options.showQr && <th style={{ width: 96 }}>Mã QR tra cứu</th>}
                 </tr>
               </thead>
@@ -195,14 +194,9 @@ export function PrintListPage() {
                           <div className="print-attachments">Kèm theo: {d.attachments.map((a) => a.name).join('; ')}</div>
                         )}
                       </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <a href={url} target="_blank" rel="noopener noreferrer">
-                          Xem văn bản
-                        </a>
-                      </td>
                       {options.showQr && (
                         <td style={{ textAlign: 'center' }}>
-                          <QRCode value={url} type="svg" size={80} bordered={false} bgColor="#ffffff" errorLevel="M" style={{ margin: '0 auto', padding: 0 }} />
+                          <QRCode value={url} type="svg" size={80} bordered={false} color="#000000" bgColor="#ffffff" errorLevel="M" style={{ margin: '0 auto', padding: 0 }} />
                         </td>
                       )}
                     </tr>
@@ -210,9 +204,6 @@ export function PrintListPage() {
                 })}
               </tbody>
             </table>
-            <div className="print-footer">
-              Gồm {rows.length} văn bản · In ngày {dayjs().format('DD/MM/YYYY')} từ {SITE_NAME}
-            </div>
           </>
         )}
       </div>
