@@ -122,6 +122,30 @@ service cloud.firestore {
           && request.resource.data.createdAt == resource.data.createdAt;
         allow delete: if vbIsEditor(slug) || vbIsAdmin();
       }
+
+      // Danh sách lớp (họ tên, ngày sinh, địa chỉ HS) — QR dán cửa lớp. Ai có link
+      // thì `get` được, nhưng KHÔNG `list` công khai: doc ID ngẫu nhiên = mã bí mật,
+      // người ngoài không dò ra các lớp. Rules không lặp được list nên chỉ giới hạn
+      // số học sinh — khớp MAX_STUDENTS_PER_CLASS trong src/services/classService.ts.
+      match /classes/{classId} {
+        allow get: if true;
+        allow list: if vbIsEditor(slug) || vbIsAdmin();
+        allow create: if vbIsEditor(slug)
+          && vbValidClass(request.resource.data)
+          && request.resource.data.createdBy == request.auth.uid;
+        allow update: if vbIsEditor(slug)
+          && vbValidClass(request.resource.data)
+          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if vbIsEditor(slug) || vbIsAdmin();
+      }
+    }
+
+    function vbValidClass(d) {
+      return d.keys().hasOnly(['name', 'students', 'createdAt', 'createdBy', 'updatedAt'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 30
+        && d.students is list && d.students.size() <= 150
+        && d.createdAt is int && d.updatedAt is int;
     }
 
     // Danh sách email quản lý 1 trường — KHÔNG công khai. Người quản lý đọc được

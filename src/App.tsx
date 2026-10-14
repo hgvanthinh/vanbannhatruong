@@ -5,6 +5,8 @@ import 'dayjs/locale/vi';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { AdminPage } from './pages/AdminPage';
+import { ClassPublicPage } from './pages/ClassPublicPage';
+import { ClassQrPrintPage } from './pages/ClassQrPrintPage';
 import { DocRedirectPage } from './pages/DocRedirectPage';
 import { HomePage } from './pages/HomePage';
 import { ManagePage } from './pages/ManagePage';
@@ -37,8 +39,11 @@ export default function App() {
               <Route path="/truong/:slug" element={<PublicSchoolPage />} />
               <Route path="/truong/:slug/in" element={<PrintListPage />} />
               <Route path="/vb/:slug/:docId" element={<DocRedirectPage />} />
+              {/* Danh sách lớp — chỉ ai có link (QR cửa lớp) mới mở được */}
+              <Route path="/lop/:slug/:classId" element={<ClassPublicPage />} />
               {/* Nhà trường + quản trị — đăng nhập Google */}
               <Route path="/quan-ly" element={<ManagePage />} />
+              <Route path="/quan-ly/in-qr-lop/:slug" element={<ClassQrPrintPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

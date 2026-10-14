@@ -23,6 +23,7 @@ Project `bieu-quyet-c964c` đồng thời phục vụ `E:\Website\bieu-quyet-hoi
 |---|---|---|
 | `vbSchools/{slug}` | slug = đường dẫn `/truong/{slug}`, KHÔNG đổi được | `name, level, area, createdBy, createdAt, updatedAt`. Đọc công khai. Không chứa email |
 | `vbSchools/{slug}/docs/{id}` | auto | `title, docForm, category, driveUrl, attachments?, createdAt, createdBy, updatedAt`. `attachments` = phụ lục `[{name, url}]` ≤10 (`MAX_ATTACHMENTS` ở `docService.ts` + `vbValidAttachments()` trong rules), doc cũ có thể thiếu. Đọc công khai |
+| `vbSchools/{slug}/classes/{id}` | auto (ngẫu nhiên = mã bí mật) | Danh sách lớp: `name` ("6A"), `students: [{name, dob, address}]` ≤150 (`MAX_STUDENTS_PER_CLASS` + `vbValidClass()`), `createdAt, createdBy, updatedAt`. Rules: `get` công khai, `list` CHỈ người quản lý/admin — xem mục Danh sách lớp |
 | `vbSchoolEditors/{slug}` | slug | `emails[]` (lowercase) — ai trong danh sách thì quản lý trường, NGANG QUYỀN nhau, luôn ≥1. `roles` = map email → vai trò (`EDITOR_ROLES` trong `src/constants/editorRoles.ts`), ghi bằng `FieldPath` vì email có dấu chấm; rules chỉ kiểm khoá ⊆ `emails`. Doc cũ có thể thiếu `roles`. Không công khai |
 
 - HT **tự đăng ký** trường: `registerSchool()` ghi `vbSchools` + `vbSchoolEditors` trong 1 batch (rules kiểm chéo bằng `getAfter`). Slug là doc ID nên không trùng; set lên slug có sẵn = update → người lạ bị chặn.
@@ -33,6 +34,14 @@ Project `bieu-quyet-c964c` đồng thời phục vụ `E:\Website\bieu-quyet-hoi
 - Gợi ý "Tên tài liệu" khi đăng văn bản: `src/constants/docTitleSuggestions.ts` (`{NH}` = năm học hiện tại, tháng 8 sang năm mới). Chọn gợi ý thì tự đặt Hình thức theo chữ đầu tên + Loại theo gợi ý.
 - Trang in danh sách `/truong/{slug}/in` (`PrintListPage` + `src/utils/printList.ts`): lọc nhiều Loại/Hình thức + khoảng ngày ĐĂNG + từ khoá, in/lưu PDF theo mẫu hồ sơ (STT, ngày đăng, tên loại – trích yếu, QR — không có cột link vì in ra giấy). Web không lưu số/ngày ban hành nên cột "Số, ký hiệu" chỉ để trống ghi tay. Nút "In danh sách" ở trang công khai + trang quản lý mang theo bộ lọc đang xem.
 - QR từng văn bản trỏ link trung gian `/vb/{slug}/{docId}` (đọc doc rồi `location.replace` sang Drive) để sửa link/gỡ văn bản thì QR đã in vẫn đúng. Link tải xuống sinh từ link Drive ở `src/utils/driveLinks.ts`.
+
+## Danh sách lớp (QR dán cửa lớp)
+
+- Tab "Danh sách lớp" ở /quan-ly (`SchoolClassesManager`): nhập Excel (`src/utils/studentImport.ts`, SheetJS cài từ tarball cdn.sheetjs.com vì bản npm 0.18 có lỗ hổng; nạp động, chunk riêng) hoặc thêm/sửa tay (`ClassFormModal`). Bộ đọc tìm dòng tiêu đề có "Họ và tên", lấy Lớp / Ngày sinh / "Chỗ ở hiện nay" (ô gộp nhiều cột Thôn–Xã–Tỉnh → nối bằng dấu phẩy); **mọi cột khác (CCCD, cha mẹ, SĐT) bị bỏ, không lên server**. Tên viết hoa toàn bộ → Title Case.
+- Nhập lại: lớp trùng tên (`classKey`, bỏ "Lớp ", khoảng trắng, hoa/thường) thì THAY danh sách nhưng giữ doc ID → QR đã dán vẫn đúng. Lớp không có trong file để nguyên.
+- QR → `/lop/{slug}/{classId}` (`ClassPublicPage`, mobile, tìm không dấu, `noindex`). Danh sách lớp KHÔNG liên kết từ trang công khai của trường — có dữ liệu cá nhân trẻ em, chỉ ai có link mới xem. Đừng thêm danh sách lớp vào trang công khai hay cho `list` công khai.
+- In QR hàng loạt: `/quan-ly/in-qr-lop/{slug}` (`ClassQrPrintPage`, cần đăng nhập), 1/2/4/6 mã mỗi tờ A4.
+- Xoá trường thì xoá luôn `classes`.
 
 ## Storage — tải tệp thay link Drive (CHỈ máy dev)
 

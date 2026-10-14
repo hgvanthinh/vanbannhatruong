@@ -4,3 +4,8 @@ dist
 .firebase
 firebase-debug.log
 .DS_Store
+
+# File danh sách học sinh (có CCCD, SĐT cha mẹ...) — không bao giờ commit
+*.xls
+*.xlsx
+*.csv

@@ -5,6 +5,7 @@ import { GoogleOutlined, LogoutOutlined, PlusOutlined } from '@ant-design/icons'
 import { useAuth } from '../auth/AuthContext';
 import { PageShell } from '../components/PageShell';
 import { RegisterSchoolForm } from '../components/RegisterSchoolForm';
+import { SchoolClassesManager } from '../components/SchoolClassesManager';
 import { SchoolDocsManager } from '../components/SchoolDocsManager';
 import { SchoolSettings } from '../components/SchoolSettings';
 import { SITE_NAME, isAdminEmail } from '../constants/site';
@@ -173,10 +174,11 @@ export function ManagePage() {
         </div>
 
         <Tabs
-          // key: đổi trường thì dựng lại 2 tab để nạp dữ liệu của trường mới.
+          // key: đổi trường thì dựng lại các tab để nạp dữ liệu của trường mới.
           key={school.slug}
           items={[
             { key: 'docs', label: 'Văn bản', children: <SchoolDocsManager school={school} uid={user.uid} /> },
+            { key: 'classes', label: 'Danh sách lớp', children: <SchoolClassesManager school={school} uid={user.uid} /> },
             {
               key: 'settings',
               label: 'Trường & người quản lý',

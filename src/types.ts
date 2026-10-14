@@ -70,3 +70,26 @@ export interface LibraryFilter {
   keyword: string;
   sort: DocSort;
 }
+
+/** 1 học sinh trong danh sách lớp — chỉ 4 thông tin dán cửa lớp, không lưu gì thêm từ file Excel. */
+export interface Student {
+  name: string;
+  /** Chuỗi "dd/mm/yyyy" (giữ nguyên như file nhập), có thể rỗng. */
+  dob: string;
+  address: string;
+}
+
+/**
+ * vbSchools/{slug}/classes/{classId} — danh sách 1 lớp. Ai có link (QR dán cửa
+ * lớp) thì xem được, nhưng KHÔNG liệt kê công khai: rules chỉ cho `get`, còn
+ * `list` dành cho người quản lý → doc ID ngẫu nhiên đóng vai mã bí mật.
+ */
+export interface SchoolClass {
+  id: string;
+  /** VD "1A", "9B" — duy nhất trong trường (nhập Excel khớp lớp theo tên). */
+  name: string;
+  students: Student[];
+  createdAt: number;
+  createdBy: string;
+  updatedAt: number;
+}

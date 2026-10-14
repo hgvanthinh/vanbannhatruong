@@ -23,3 +23,8 @@ export function buildSchoolUrl(slug: string): string {
 export function buildDocUrl(slug: string, docId: string): string {
   return `${window.location.origin}/vb/${slug}/${docId}`;
 }
+
+/** Link danh sách lớp (QR dán cửa lớp) — classId ngẫu nhiên nên người ngoài không dò được. */
+export function buildClassUrl(slug: string, classId: string): string {
+  return `${window.location.origin}/lop/${slug}/${classId}`;
+}
