@@ -28,3 +28,8 @@ export function buildDocUrl(slug: string, docId: string): string {
 export function buildClassUrl(slug: string, classId: string): string {
   return `${window.location.origin}/lop/${slug}/${classId}`;
 }
+
+/** Link QR chung cả trường — xem mọi lớp, lọc theo khối/lớp, tìm tên học sinh. */
+export function buildClassDirectoryUrl(slug: string, dirId: string): string {
+  return `${window.location.origin}/ds-lop/${slug}/${dirId}`;
+}

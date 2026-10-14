@@ -139,6 +139,22 @@ service cloud.firestore {
           && request.resource.data.createdAt == resource.data.createdAt;
         allow delete: if vbIsEditor(slug) || vbIsAdmin();
       }
+
+      // QR chung cả trường: 1 doc BẢN SAO mọi lớp (client tự đồng bộ khi sửa lớp).
+      // Cùng cơ chế như lớp: `get` công khai, `list` chỉ người quản lý → dirId là mã bí mật.
+      match /classDirectory/{dirId} {
+        allow get: if true;
+        allow list: if vbIsEditor(slug) || vbIsAdmin();
+        allow create, update: if vbIsEditor(slug) && vbValidClassDirectory(request.resource.data);
+        allow delete: if vbIsEditor(slug) || vbIsAdmin();
+      }
+    }
+
+    // Khớp MAX_CLASSES_IN_DIRECTORY trong src/services/classService.ts.
+    function vbValidClassDirectory(d) {
+      return d.keys().hasOnly(['classes', 'updatedAt'])
+        && d.classes is list && d.classes.size() <= 200
+        && d.updatedAt is int;
     }
 
     function vbValidClass(d) {

@@ -147,15 +147,16 @@ export async function removeSchoolEditor(slug: string, email: string): Promise<v
 }
 
 /**
- * Xoá hẳn 1 trường: mọi văn bản + danh sách lớp (theo mẻ ≤ 450 thao tác/batch) rồi tới doc
+ * Xoá hẳn 1 trường: mọi văn bản + danh sách lớp + QR chung (theo mẻ ≤ 450 thao tác/batch) rồi tới doc
  * trường + danh sách email. File trên Drive KHÔNG bị ảnh hưởng; tệp tải lên Storage thì xoá theo.
  */
 export async function deleteSchool(slug: string): Promise<void> {
-  const [docsSnap, classesSnap] = await Promise.all([
+  const [docsSnap, classesSnap, directorySnap] = await Promise.all([
     getDocs(collection(db, SCHOOLS, slug, 'docs')),
     getDocs(collection(db, SCHOOLS, slug, 'classes')),
+    getDocs(collection(db, SCHOOLS, slug, 'classDirectory')),
   ]);
-  const refs = [...docsSnap.docs, ...classesSnap.docs].map((d) => d.ref);
+  const refs = [...docsSnap.docs, ...classesSnap.docs, ...directorySnap.docs].map((d) => d.ref);
   for (let i = 0; i < refs.length; i += 450) {
     const batch = writeBatch(db);
     refs.slice(i, i + 450).forEach((ref) => batch.delete(ref));

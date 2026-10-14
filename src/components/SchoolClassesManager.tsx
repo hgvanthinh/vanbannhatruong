@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, App, Button, Card, Empty, Popconfirm, Skeleton, Space, Typography } from 'antd';
-import { DeleteOutlined, EditOutlined, ExportOutlined, FileExcelOutlined, PlusOutlined, PrinterOutlined, QrcodeOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  ExportOutlined,
+  FileExcelOutlined,
+  PlusOutlined,
+  PrinterOutlined,
+  QrcodeOutlined,
+  TeamOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { buildClassUrl } from '../constants/site';
+import { buildClassDirectoryUrl, buildClassUrl } from '../constants/site';
 import {
   createSchoolClass,
   deleteSchoolClass,
+  ensureClassDirectory,
   importClasses,
   listClasses,
   updateSchoolClass,
@@ -15,6 +25,12 @@ import { ClassFormModal, type ClassFormValues } from './ClassFormModal';
 import { ClassImportModal } from './ClassImportModal';
 import { QrCodeModal } from './QrCodeModal';
 import type { School, SchoolClass } from '../types';
+
+interface QrTarget {
+  caption: string;
+  url: string;
+  fileName: string;
+}
 
 /**
  * Tab "Danh sách lớp" của trang quản lý: nhập Excel / thêm tay, mỗi lớp 1 QR
@@ -32,7 +48,8 @@ export function SchoolClassesManager({ school, uid }: { school: School; uid: str
   const [importFileName, setImportFileName] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<SchoolClass | null>(null);
-  const [qrClass, setQrClass] = useState<SchoolClass | null>(null);
+  const [qrTarget, setQrTarget] = useState<QrTarget | null>(null);
+  const [openingSchoolQr, setOpeningSchoolQr] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -101,6 +118,31 @@ export function SchoolClassesManager({ school, uid }: { school: School; uid: str
     }
   }
 
+  /** QR chung: tạo danh bạ lần đầu (hoặc ghi lại bản mới nhất) rồi hiện mã. */
+  async function openSchoolQr() {
+    setOpeningSchoolQr(true);
+    try {
+      const dirId = await ensureClassDirectory(school.slug);
+      setQrTarget({
+        caption: `Danh sách lớp - ${school.name}`,
+        url: buildClassDirectoryUrl(school.slug, dirId),
+        fileName: `QR - Danh sach lop - ${school.slug}`,
+      });
+    } catch {
+      message.error('Không tạo được mã QR chung, vui lòng thử lại');
+    } finally {
+      setOpeningSchoolQr(false);
+    }
+  }
+
+  function showClassQr(c: SchoolClass) {
+    setQrTarget({
+      caption: `Lớp ${c.name} - ${school.name}`,
+      url: buildClassUrl(school.slug, c.id),
+      fileName: `QR - Lop ${c.name}`,
+    });
+  }
+
   function openForm(c: SchoolClass | null) {
     setEditing(c);
     setFormOpen(true);
@@ -114,7 +156,7 @@ export function SchoolClassesManager({ school, uid }: { school: School; uid: str
         type="info"
         showIcon
         title="In mã QR từng lớp dán lên cửa lớp — ai quét cũng xem được danh sách, không cần đăng nhập."
-        description="Danh sách lớp không hiện ở trang văn bản công khai của trường; chỉ người quét QR (có link) mới mở được. Nhập lại Excel hoặc sửa lớp thì mã QR đã dán vẫn giữ nguyên."
+        description="“QR cả trường” mở được mọi lớp, lọc theo khối và tìm tên học sinh toàn trường (dán ở phòng hội đồng, bảng tin...). Danh sách lớp không hiện ở trang văn bản công khai; chỉ người quét QR (có link) mới mở được. Nhập lại Excel hoặc sửa lớp thì mã QR đã dán vẫn giữ nguyên."
       />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', alignItems: 'center' }}>
@@ -122,6 +164,9 @@ export function SchoolClassesManager({ school, uid }: { school: School; uid: str
           {loading ? 'Đang tải...' : `${classes.length} lớp · ${totalStudents} học sinh`}
         </Typography.Text>
         <Space wrap>
+          <Button icon={<TeamOutlined />} loading={openingSchoolQr} onClick={openSchoolQr} disabled={classes.length === 0}>
+            QR cả trường
+          </Button>
           <Button href={`/quan-ly/in-qr-lop/${school.slug}`} target="_blank" icon={<PrinterOutlined />} disabled={classes.length === 0}>
             In QR các lớp
           </Button>
@@ -166,7 +211,7 @@ export function SchoolClassesManager({ school, uid }: { school: School; uid: str
                 Cập nhật {dayjs(c.updatedAt).format('DD/MM/YYYY')}
               </Typography.Text>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
-                <Button icon={<QrcodeOutlined />} onClick={() => setQrClass(c)}>
+                <Button icon={<QrcodeOutlined />} onClick={() => showClassQr(c)}>
                   QR
                 </Button>
                 <Button icon={<ExportOutlined />} href={buildClassUrl(school.slug, c.id)} target="_blank" rel="noopener noreferrer">
@@ -204,11 +249,11 @@ export function SchoolClassesManager({ school, uid }: { school: School; uid: str
       <ClassFormModal open={formOpen} editing={editing} existing={classes} onCancel={() => setFormOpen(false)} onSubmit={handleSubmit} />
 
       <QrCodeModal
-        open={!!qrClass}
-        onClose={() => setQrClass(null)}
-        caption={qrClass ? `Lớp ${qrClass.name} - ${school.name}` : ''}
-        url={qrClass ? buildClassUrl(school.slug, qrClass.id) : ''}
-        fileName={qrClass ? `QR - Lop ${qrClass.name}` : 'QR'}
+        open={!!qrTarget}
+        onClose={() => setQrTarget(null)}
+        caption={qrTarget?.caption ?? ''}
+        url={qrTarget?.url ?? ''}
+        fileName={qrTarget?.fileName ?? 'QR'}
       />
     </Space>
   );

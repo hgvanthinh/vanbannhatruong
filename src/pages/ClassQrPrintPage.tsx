@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Button, Card, QRCode, Result, Segmented, Select, Space, Spin, Typography } from 'antd';
+import { Button, Card, Checkbox, QRCode, Result, Segmented, Select, Space, Spin, Typography } from 'antd';
 import { ArrowLeftOutlined, PrinterOutlined } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthContext';
-import { buildClassUrl, SITE_NAME } from '../constants/site';
-import { listClasses } from '../services/classService';
+import { buildClassDirectoryUrl, buildClassUrl, SITE_NAME } from '../constants/site';
+import { ensureClassDirectory, listClasses } from '../services/classService';
 import { getSchool } from '../services/schoolService';
 import type { School, SchoolClass } from '../types';
 
@@ -26,6 +26,8 @@ export function ClassQrPrintPage() {
   const [state, setState] = useState<LoadState>('loading');
   const [perPage, setPerPage] = useState<PerPage>(4);
   const [only, setOnly] = useState<string[]>([]);
+  const [withSchoolQr, setWithSchoolQr] = useState(true);
+  const [dirId, setDirId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -44,10 +46,19 @@ export function ClassQrPrintPage() {
     };
   }, [slug, user]);
 
+  // QR chung chỉ tạo khi thật sự in kèm (lần đầu sẽ ghi danh bạ lên Firestore).
+  useEffect(() => {
+    if (!user || !withSchoolQr || dirId) return;
+    ensureClassDirectory(slug)
+      .then(setDirId)
+      .catch(() => setWithSchoolQr(false));
+  }, [slug, user, withSchoolQr, dirId]);
+
   useEffect(() => {
     document.title = school ? `QR các lớp - ${school.name}` : SITE_NAME;
   }, [school]);
 
+  const showSchoolQr = withSchoolQr && !!dirId;
   const printed = useMemo(() => (only.length ? classes.filter((c) => only.includes(c.id)) : classes), [classes, only]);
 
   if (authLoading) return <Spin style={{ margin: 40 }} />;
@@ -86,8 +97,16 @@ export function ClassQrPrintPage() {
             options={classes.map((c) => ({ value: c.id, label: `Lớp ${c.name}` }))}
             style={{ width: '100%' }}
           />
-          <Button type="primary" icon={<PrinterOutlined />} onClick={() => window.print()} disabled={printed.length === 0}>
-            In {printed.length} mã QR
+          <Checkbox checked={withSchoolQr} onChange={(e) => setWithSchoolQr(e.target.checked)}>
+            Kèm 1 mã QR chung cả trường (xem mọi lớp, tìm tên học sinh) — dán phòng hội đồng, bảng tin
+          </Checkbox>
+          <Button
+            type="primary"
+            icon={<PrinterOutlined />}
+            onClick={() => window.print()}
+            disabled={printed.length === 0 && !showSchoolQr}
+          >
+            In {printed.length + (showSchoolQr ? 1 : 0)} mã QR
           </Button>
         </Space>
       </Card>
@@ -96,6 +115,16 @@ export function ClassQrPrintPage() {
         <Spin style={{ display: 'block', margin: 40 }} />
       ) : (
         <div className={`qr-sheet qr-sheet-${perPage}`}>
+          {showSchoolQr && dirId && (
+            <div className="qr-card">
+              <div className="qr-card-school">{school?.name}</div>
+              <div className="qr-card-class qr-card-all">DANH SÁCH HỌC SINH</div>
+              <QRCode value={buildClassDirectoryUrl(slug, dirId)} type="svg" size={240} bordered={false} bgColor="#ffffff" errorLevel="M" />
+              <div className="qr-card-hint">
+                Quét mã để xem {classes.length} lớp · {classes.reduce((n, c) => n + c.students.length, 0)} học sinh
+              </div>
+            </div>
+          )}
           {printed.map((c) => (
             <div key={c.id} className="qr-card">
               <div className="qr-card-school">{school?.name}</div>

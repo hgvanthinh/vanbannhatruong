@@ -93,3 +93,13 @@ export interface SchoolClass {
   createdBy: string;
   updatedAt: number;
 }
+
+/**
+ * vbSchools/{slug}/classDirectory/{dirId} — QR chung cả trường: BẢN SAO mọi lớp
+ * (classService tự đồng bộ mỗi lần sửa lớp). Cũng chỉ `get` công khai như lớp.
+ */
+export interface ClassDirectory {
+  id: string;
+  classes: { id: string; name: string; students: Student[] }[];
+  updatedAt: number;
+}

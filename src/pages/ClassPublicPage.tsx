@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Input, Result, Skeleton } from 'antd';
-import { CalendarOutlined, EnvironmentOutlined, SearchOutlined, TeamOutlined } from '@ant-design/icons';
+import { SearchOutlined, TeamOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { PageShell } from '../components/PageShell';
+import { StudentList } from '../components/StudentList';
 import { SITE_NAME } from '../constants/site';
 import { getSchoolClass } from '../services/classService';
 import { getSchool } from '../services/schoolService';
@@ -55,7 +56,7 @@ export function ClassPublicPage() {
   }, []);
 
   const rows = useMemo(() => {
-    const list = (schoolClass?.students ?? []).map((s, i) => ({ ...s, no: i + 1 }));
+    const list = (schoolClass?.students ?? []).map((s, i) => ({ ...s, no: i + 1, key: String(i) }));
     const kw = normalizeVi(keyword);
     return kw ? list.filter((s) => normalizeVi(s.name).includes(kw)) : list;
   }, [schoolClass, keyword]);
@@ -103,27 +104,7 @@ export function ClassPublicPage() {
             </div>
           )}
 
-          <ol className="student-list">
-            {rows.map((s) => (
-              <li key={s.no} className="student-item">
-                <span className="student-no">{s.no}</span>
-                <div className="student-body">
-                  <div className="student-name">{s.name}</div>
-                  {s.dob && (
-                    <div className="student-meta">
-                      <CalendarOutlined /> {s.dob}
-                    </div>
-                  )}
-                  {s.address && (
-                    <div className="student-meta">
-                      <EnvironmentOutlined /> <span>{s.address}</span>
-                    </div>
-                  )}
-                </div>
-              </li>
-            ))}
-            {rows.length === 0 && <li className="student-empty">Không có học sinh nào tên “{keyword}”</li>}
-          </ol>
+          <StudentList rows={rows} emptyText={`Không có học sinh nào tên “${keyword}”`} />
 
           <div className="class-footer">Cập nhật {dayjs(schoolClass.updatedAt).format('DD/MM/YYYY')}</div>
         </>
